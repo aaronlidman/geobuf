@@ -2,7 +2,6 @@
 
 var geobuf = require('../'),
     geojsonFixtures = require('geojson-fixtures').all,
-    Pbf = require('pbf'),
     test = require('tap').test,
     fs = require('fs'),
     path = require('path');
@@ -19,8 +18,8 @@ test('roundtrip single-ring MultiPolygon', roundtripTest(getJSON('single-multipo
 
 test('roundtrip valid closed polygon with high-precision coordinates', function (t) {
     var geojson = getJSON('precision.json');
-    var pbf = new Pbf(geobuf.encode(geojson, new Pbf()));
-    var ring = geobuf.decode(pbf).features[0].geometry.coordinates[0];
+    var encoded = geobuf.encode(geojson);
+    var ring = geobuf.decode(encoded).features[0].geometry.coordinates[0];
     t.same(ring[0], ring[4]);
     t.end();
 });
@@ -42,7 +41,7 @@ test('roundtrip a line with potential accumulating error', function (t) {
         feature.coordinates[0][0].push([i * 1.00000049, 0]);
     }
     feature.coordinates[0][0].push([0, 0]);
-    var roundTripped = geobuf.decode(new Pbf(geobuf.encode(feature, new Pbf())));
+    var roundTripped = geobuf.decode(geobuf.encode(feature));
     function roundX(z) {
         return Math.round(z[0] * 1000000) / 1000000.0;
     }
@@ -63,7 +62,7 @@ test('roundtrip a circle with potential accumulating error', function (t) {
         feature.coordinates[0][0].push([Math.cos(Math.PI * 2.0 * i / points),
                                         Math.sin(Math.PI * 2.0 * i / points)]);
     }
-    var roundTripped = geobuf.decode(new Pbf(geobuf.encode(feature, new Pbf())));
+    var roundTripped = geobuf.decode(geobuf.encode(feature));
     function roundCoord(z) {
         return [Math.round(z[0] * 1000000), Math.round(z[1] * 1000000)];
     }
@@ -75,8 +74,8 @@ test('roundtrip a circle with potential accumulating error', function (t) {
 
 function roundtripTest(geojson) {
     return function (t) {
-        var buf = geobuf.encode(geojson, new Pbf());
-        var geojson2 = geobuf.decode(new Pbf(buf));
+        var buf = geobuf.encode(geojson);
+        var geojson2 = geobuf.decode(buf);
         t.same(geojson2, geojson);
         t.end();
     };

@@ -44,20 +44,19 @@ idaho.pbf           | 1.37 MB   | 1.17 MB
 ### encode
 
 ```js
-var buffer = geobuf.encode(geojson, new Pbf());
+var buffer = geobuf.encode(geojson);
 ```
 
-Given a GeoJSON object and a [Pbf](https://github.com/mapbox/pbf) object to write to,
-returns a Geobuf as `UInt8Array` arrya of bytes.
+Given a GeoJSON object, returns a Geobuf as `UInt8Array` arrya of bytes.
 In Node, you can use `Buffer.from` to convert back to a buffer.
 
 ### decode
 
 ```js
-var geojson = geobuf.decode(new Pbf(data));
+var geojson = geobuf.decode(data);
 ```
 
-Given a [Pbf](https://github.com/mapbox/pbf) object with Geobuf data, return a GeoJSON object.
+Given Geobuf data, return a GeoJSON object.
 
 
 ## Install

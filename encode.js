@@ -2,6 +2,8 @@
 
 module.exports = encode;
 
+var Pbf = require('pbf');
+
 var keys, keysNum, dim, e,
     maxPrecision = 1e6;
 
@@ -15,7 +17,9 @@ var geometryTypes = {
     'GeometryCollection': 6
 };
 
-function encode(obj, pbf) {
+function encode(obj) {
+    var pbf = new Pbf();
+
     keys = {};
     keysNum = 0;
     dim = 0;
