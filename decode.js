@@ -5,7 +5,7 @@ module.exports = decode;
 var Pbf = require('pbf');
 var keys, values, lengths, dim, e;
 var geometryTypes = ['Point', 'MultiPoint', 'LineString', 'MultiLineString',
-                      'Polygon', 'MultiPolygon', 'GeometryCollection'];
+    'Polygon', 'MultiPolygon', 'GeometryCollection'];
 
 function decode(buffer) {
     var pbf = new Pbf(buffer);
