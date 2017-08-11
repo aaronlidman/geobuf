@@ -18,31 +18,48 @@ var geometryTypes = {
 };
 
 function encode(obj) {
-    var pbf = new Pbf();
+    var pbf = initializeBlock();
+    appendFeature(obj, pbf);
+    return writeBlock(pbf);
+}
 
+function initializeBlock() {
     keys = {};
     keysNum = 0;
     dim = 0;
     e = 1;
+    return new Pbf();
+}
 
+function appendFeature(obj, pbf) {
     analyze(obj);
-
-    e = Math.min(e, maxPrecision);
-    var precision = Math.ceil(Math.log(e) / Math.LN10);
-
-    var keysArr = Object.keys(keys);
-
-    for (var i = 0; i < keysArr.length; i++) pbf.writeStringField(1, keysArr[i]);
-    if (dim !== 2) pbf.writeVarintField(2, dim);
-    if (precision !== 6) pbf.writeVarintField(3, precision);
 
     if (obj.type === 'FeatureCollection') pbf.writeMessage(4, writeFeatureCollection, obj);
     else if (obj.type === 'Feature') pbf.writeMessage(5, writeFeature, obj);
     else pbf.writeMessage(6, writeGeometry, obj);
+}
 
-    keys = null;
+function writeBlock(pbf) {
+    var metadata = new Pbf();
 
-    return pbf.finish();
+    e = Math.min(e, maxPrecision);
+    var precision = Math.ceil(Math.log(e) / Math.LN10);
+    var keysArr = Object.keys(keys);
+
+    // write metadata
+    for (var i = 0; i < keysArr.length; i++) metadata.writeStringField(1, keysArr[i]);
+    if (dim !== 2) metadata.writeVarintField(2, dim);
+    if (precision !== 6) metadata.writeVarintField(3, precision);
+
+    metadata = metadata.finish();
+    pbf = pbf.finish();
+
+    // prepend metadata, unfortunately we have to copy
+    var block = new Int8Array(metadata.length + pbf.length);
+    block.set(metadata);
+    block.set(pbf, metadata.length);
+
+    return block;
 }
 
 function analyze(obj) {
