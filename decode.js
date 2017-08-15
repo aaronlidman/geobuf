@@ -3,39 +3,68 @@
 module.exports = decode;
 
 var Pbf = require('pbf');
-var keys, values, lengths, dim, e;
-var geometryTypes = ['Point', 'MultiPoint', 'LineString', 'MultiLineString',
-    'Polygon', 'MultiPolygon', 'GeometryCollection'];
+var keys, values, lengths, dim, e, blockSize, version;
+
+// cooresponding to tags
+var geometryTypes = {
+    'Point': 7,
+    'Line': 8,
+    'Polygon': 9,
+    'MultiPoint': 10,
+    'MultiLine': 11,
+    'MultiPolygon': 12
+};
 
 function decode(buffer) {
+    initializeBlock();
     var pbf = new Pbf(buffer);
-
-    dim = 2;
-    e = Math.pow(10, 6);
-    lengths = null;
-
-    keys = [];
-    values = [];
     var obj = pbf.readFields(readDataField, {});
     keys = null;
-
     return obj;
 }
 
-function readDataField(tag, obj, pbf) {
-    if (tag === 1) keys.push(pbf.readString());
-    else if (tag === 2) dim = pbf.readVarint();
-    else if (tag === 3) e = Math.pow(10, pbf.readVarint());
+function initializeBlock() {
+    dim = 2;
+    e = Math.pow(10, 6);
+    lengths = null;
+    blockSize = 0;
+    version = null;
+    keys = [];
+    values = [];
+}
 
-    else if (tag === 4) readFeatureCollection(pbf, obj);
-    else if (tag === 5) readFeature(pbf, obj);
-    else if (tag === 6) readGeometry(pbf, obj);
+function readDataField(tag, obj, pbf) {
+    if (tag === 1) blockSize = pbf.readFixed32();
+    else if (tag === 2) pbf.readMessage(readMetadataField, obj);
+    else if (tag === 3) readFeatureCollection(pbf, obj);
+    else if (tag === 4) readGeometryCollection(pbf, obj);
+    else if (tag === 5) closeCollection();
+    else if (tag === 6) readFeature(pbf, obj);
+    else if (tag > 6 && tag < 13) readGeometry(tag, pbf, obj);
+}
+
+function readMetadataField(tag, obj, pbf) {
+    if (tag === 1) version = pbf.readVarint();
+    else if (tag === 3) dim = pbf.readVarint();
+    else if (tag === 4) e = Math.pow(10, pbf.readVarint());
+    else if (tag === 5) keys.push(pbf.readString());
+    else if (tag === 6) values.push(readValue(pbf));
 }
 
 function readFeatureCollection(pbf, obj) {
     obj.type = 'FeatureCollection';
     obj.features = [];
-    return pbf.readMessage(readFeatureCollectionField, obj);
+    return pbf.readMessage(readCollectionField, obj);
+}
+
+function readGeometryCollection(pbf, obj) {
+    obj.type = 'GeometryCollection';
+    obj.geometries = [];
+    return pbf.readMessage(readCollectionField, obj);
+}
+
+function closeCollection() {
+    console.error('closing collection');
 }
 
 function readFeature(pbf, feature) {
@@ -43,38 +72,25 @@ function readFeature(pbf, feature) {
     return pbf.readMessage(readFeatureField, feature);
 }
 
-function readGeometry(pbf, geom) {
+function readGeometry(tag, pbf, geom) {
+    geom.type = geometryTypes[tag];
     return pbf.readMessage(readGeometryField, geom);
 }
 
-function readFeatureCollectionField(tag, obj, pbf) {
-    if (tag === 1) obj.features.push(readFeature(pbf, {}));
-
-    else if (tag === 13) values.push(readValue(pbf));
-    else if (tag === 15) readProps(pbf, obj);
+function readCollectionField(tag, obj, pbf) {
+    if (tag === 15) readProps(pbf, obj);
 }
 
 function readFeatureField(tag, feature, pbf) {
-    if (tag === 1) feature.geometry = readGeometry(pbf, {});
-
-    else if (tag === 11) feature.id = pbf.readString();
-    else if (tag === 12) feature.id = pbf.readSVarint();
-
-    else if (tag === 13) values.push(readValue(pbf));
+    if (tag === 1) feature.id = pbf.readString();
+    else if (tag === 2) feature.id = pbf.readSVarint();
     else if (tag === 14) feature.properties = readProps(pbf, {});
     else if (tag === 15) readProps(pbf, feature);
 }
 
 function readGeometryField(tag, geom, pbf) {
-    if (tag === 1) geom.type = geometryTypes[pbf.readVarint()];
-
-    else if (tag === 2) lengths = pbf.readPackedVarint();
-    else if (tag === 3) readCoords(geom, pbf, geom.type);
-    else if (tag === 4) {
-        geom.geometries = geom.geometries || [];
-        geom.geometries.push(readGeometry(pbf, {}));
-    }
-    else if (tag === 13) values.push(readValue(pbf));
+    if (tag === 1) lengths = pbf.readPackedVarint();
+    else if (tag === 2) readCoords(geom, pbf, geom.type);
     else if (tag === 15) readProps(pbf, geom);
 }
 
