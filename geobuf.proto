@@ -22,13 +22,12 @@ message Data {
 
 message Metadata {
     uint32 version = 1; // geobuf version
-    uint32 block_size = 2; // byte length of the following block
 
     uint32 dimensions = 3; // max coordinate dimensions
     uint32 precision = 4; // number of digits after decimal point for coordinates
 
-    repeated string keys = 5; // array of unique keys of a block
-    repeated Value values = 6; // array of unique values of a block
+    repeated string keys = 5; // array of unique keys in a block
+    repeated Value values = 6; // array of unique values in a block
 }
 
 message Collection {
