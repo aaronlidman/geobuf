@@ -4,8 +4,8 @@ module.exports = encode;
 
 var Pbf = require('pbf');
 
-var keys, keysNum, dim, e,
-    maxPrecision = 1e6;
+var keys, values, keysNum,
+    dim, e, maxPrecision = 1e6;
 
 function encode(obj) {
     var pbf = initializeBlock();
@@ -16,24 +16,30 @@ function encode(obj) {
 
 function initializeBlock() {
     keys = {};
+    values = new Set();
     keysNum = 0;
     dim = 0;
     e = 1;
     return new Pbf();
 }
 
-function writeBlock(pbf) {
-    var metadata = new Pbf();
-
+function writeMetadata(obj, pbf) {
     e = Math.min(e, maxPrecision);
     var precision = Math.ceil(Math.log(e) / Math.LN10);
     var keysArr = Object.keys(keys);
 
-    for (var i = 0; i < keysArr.length; i++) metadata.writeStringField(1, keysArr[i]);
-    if (dim !== 2) metadata.writeVarintField(2, dim);
-    if (precision !== 6) metadata.writeVarintField(3, precision);
+    pbf.writeVarintField(1, 0);
+    if (dim !== 2) pbf.writeVarintField(3, dim);
+    if (precision !== 6) pbf.writeVarintField(4, precision);
+    for (var i = 0; i < keysArr.length; i++) pbf.writeStringField(5, keysArr[i]);
+    for (var k = 0; k < values.length; k++) pbf.writeMessage(6, writeValue, values[k]);
+}
 
+function writeBlock(pbf) {
+    var metadata = new Pbf();
+    metadata.writeMessage(2, writeMetadata, {});
     metadata = metadata.finish();
+
     pbf = pbf.finish();
 
     // prepend metadata, unfortunately we must copy
@@ -54,7 +60,7 @@ function analyze(obj) {
 
     } else if (obj.type === 'Feature') {
         analyze(obj.geometry);
-        for (key in obj.properties) saveKey(key);
+        for (key in obj.properties) saveKeyValue(key, obj.properties[key]);
 
     } else if (obj.type === 'Point') analyzePoint(obj.coordinates);
     else if (obj.type === 'MultiPoint') analyzePoints(obj.coordinates);
@@ -68,7 +74,7 @@ function analyze(obj) {
     }
 
     for (key in obj) {
-        if (!isSpecialKey(key, obj.type)) saveKey(key);
+        if (!isSpecialKey(key, obj.type)) saveKeyValue(key, null);
     }
 }
 
@@ -89,11 +95,14 @@ function analyzePoint(point) {
     }
 }
 
-function saveKey(key) {
+function saveKeyValue(key, value) {
     if (keys[key] === undefined) keys[key] = keysNum++;
+    if (value && !values.has(value)) values.add(value);
 }
 
 function writeObjects(obj, pbf) {
+    values = Array.from(values);
+
     if (obj.type === 'FeatureCollection') pbf.writeMessage(3, writeFeatureCollection, obj);
     else if (obj.type === 'GeometryCollection') pbf.writeMessage(4, writeGeometryCollection, obj);
     else if (obj.type === 'Feature') {
@@ -141,17 +150,16 @@ function writeGeometry(geom, pbf) {
 }
 
 function writeProps(props, pbf, isCustom) {
-    var indexes = [],
-        valueIndex = 0;
+    var indexes = [];
 
     for (var key in props) {
         if (isCustom && isSpecialKey(key, props.type)) {
             continue;
         }
-        pbf.writeMessage(13, writeValue, props[key]);
         indexes.push(keys[key]);
-        indexes.push(valueIndex++);
+        indexes.push(values.indexOf(props[key]));
     }
+
     pbf.writePackedVarint(isCustom ? 15 : 14, indexes);
 }
 
