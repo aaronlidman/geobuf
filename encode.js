@@ -10,7 +10,7 @@ var keys, values, keysNum,
 function encode(obj) {
     var pbf = initializeBlock();
     analyze(obj);
-    writeObjects(obj, pbf);
+    writeObject(obj, pbf);
     return writeBlock(pbf);
 }
 
@@ -100,11 +100,19 @@ function saveKeyValue(key, value) {
     if (value && !values.has(value)) values.add(value);
 }
 
-function writeObjects(obj, pbf) {
+function writeObject(obj, pbf) {
     values = Array.from(values);
 
-    if (obj.type === 'FeatureCollection') pbf.writeMessage(3, writeFeatureCollection, obj);
-    else if (obj.type === 'GeometryCollection') pbf.writeMessage(4, writeGeometryCollection, obj);
+    if (obj.type === 'FeatureCollection') {
+        pbf.writeMessage(3, writeFeatureCollection, obj);
+        for (var i = 0; i < obj.features.length; i++) writeObject(obj.features[i], pbf);
+        pbf.writeMessage(5, function () {}, {});
+    }
+    else if (obj.type === 'GeometryCollection') {
+        pbf.writeMessage(4, function () {}, {});
+        for (var k = 0; k < obj.geometries.length; k++) writeObject(obj.geometries[k], pbf);
+        pbf.writeMessage(5, function () {}, {});
+    }
     else if (obj.type === 'Feature') {
         pbf.writeMessage(6, writeFeature, obj);
         writeGeometry(obj.geometry, pbf);
@@ -112,18 +120,7 @@ function writeObjects(obj, pbf) {
 }
 
 function writeFeatureCollection(obj, pbf) {
-    for (var i = 0; i < obj.features.length; i++) {
-        writeObjects(obj.features[i], pbf);
-    }
     writeProps(obj, pbf, true);
-    // TODO close collection, rethink message level encoding
-}
-
-function writeGeometryCollection(obj, pbf) {
-    for (var i = 0; i < obj.geometries.length; i++) {
-        writeGeometry(obj.geometries[i], pbf);
-    }
-    // TODO close collection, rethink message level encoding
 }
 
 function writeFeature(feature, pbf) {
