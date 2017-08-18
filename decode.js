@@ -3,16 +3,20 @@
 module.exports = decode;
 
 var Pbf = require('pbf');
-var keys, values, lengths, dim, e, blockSize, version;
+
+var keys, values, lengths,
+    dim, e, blockSize, version,
+    prevFeatureCol, prevGeometryCol,
+    prevFeature;
 
 // cooresponding to tags
 var geometryTypes = {
-    'Point': 7,
-    'Line': 8,
-    'Polygon': 9,
-    'MultiPoint': 10,
-    'MultiLine': 11,
-    'MultiPolygon': 12
+    '7': 'Point',
+    '8': 'Line',
+    '9': 'Polygon',
+    '10': 'MultiPoint',
+    '11': 'MultiLine',
+    '12': 'MultiPolygon'
 };
 
 function decode(buffer) {
@@ -54,27 +58,44 @@ function readMetadataField(tag, obj, pbf) {
 function readFeatureCollection(pbf, obj) {
     obj.type = 'FeatureCollection';
     obj.features = [];
-    return pbf.readMessage(readCollectionField, obj);
+    pbf.readMessage(readCollectionField, obj);
+    prevFeatureCol = obj;
 }
 
 function readGeometryCollection(pbf, obj) {
     obj.type = 'GeometryCollection';
     obj.geometries = [];
-    return pbf.readMessage(readCollectionField, obj);
+    pbf.readMessage(readCollectionField, obj);
+    prevGeometryCol = obj;
 }
 
 function closeCollection() {
-    console.error('closing collection');
+    prevFeatureCol = null;
+    prevGeometryCol = null;
 }
 
 function readFeature(pbf, feature) {
+    feature = {};
     feature.type = 'Feature';
-    return pbf.readMessage(readFeatureField, feature);
+    feature.geometry = {};
+    pbf.readMessage(readFeatureField, feature);
+    prevFeature = feature;
 }
 
 function readGeometry(tag, pbf, geom) {
+    geom = {};
     geom.type = geometryTypes[tag];
-    return pbf.readMessage(readGeometryField, geom);
+    pbf.readMessage(readGeometryField, geom);
+
+    if (prevFeature) {
+        prevFeature.geometry = geom;
+        geom = prevFeature;
+
+        if (prevFeatureCol) prevFeatureCol.features.push(prevFeature);
+    } else if (prevGeometryCol) {
+        prevGeometryCol.geometries.push(geom);
+        geom = prevGeometryCol;
+    }
 }
 
 function readCollectionField(tag, obj, pbf) {
@@ -124,7 +145,6 @@ function readValue(pbf) {
 function readProps(pbf, props) {
     var end = pbf.readVarint() + pbf.pos;
     while (pbf.pos < end) props[keys[pbf.readVarint()]] = values[pbf.readVarint()];
-    values = [];
     return props;
 }
 
