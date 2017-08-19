@@ -157,7 +157,7 @@ function writeProps(props, pbf, isCustom) {
         indexes.push(values.indexOf(props[key]));
     }
 
-    pbf.writePackedVarint(isCustom ? 15 : 14, indexes);
+    if (indexes.length) pbf.writePackedVarint(isCustom ? 15 : 14, indexes);
 }
 
 function writeValue(value, pbf) {
