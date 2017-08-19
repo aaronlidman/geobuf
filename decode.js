@@ -11,7 +11,7 @@ var keys, values, lengths,
 // cooresponding to tags
 var geometryTypes = {
     '7': 'Point',
-    '8': 'Line',
+    '8': 'LineString',
     '9': 'Polygon',
     '10': 'MultiPoint',
     '11': 'MultiLine',
