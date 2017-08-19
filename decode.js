@@ -6,8 +6,7 @@ var Pbf = require('pbf');
 
 var keys, values, lengths,
     dim, e, blockSize, version,
-    prevFeatureCol, prevGeometryCol,
-    prevFeature;
+    openFeatureCol, openGeometryCol;
 
 // cooresponding to tags
 var geometryTypes = {
@@ -58,44 +57,35 @@ function readMetadataField(tag, obj, pbf) {
 function readFeatureCollection(pbf, obj) {
     obj.type = 'FeatureCollection';
     obj.features = [];
-    pbf.readMessage(readCollectionField, obj);
-    prevFeatureCol = obj;
+    openFeatureCol = true;
+    return pbf.readMessage(readCollectionField, obj);
 }
 
 function readGeometryCollection(pbf, obj) {
     obj.type = 'GeometryCollection';
     obj.geometries = [];
-    pbf.readMessage(readCollectionField, obj);
-    prevGeometryCol = obj;
+    openGeometryCol = true;
+    return pbf.readMessage(readCollectionField, obj);
 }
 
 function closeCollection() {
-    prevFeatureCol = null;
-    prevGeometryCol = null;
+    openFeatureCol = false;
+    openGeometryCol = false;
 }
 
-function readFeature(pbf, feature) {
-    feature = {};
-    feature.type = 'Feature';
-    feature.geometry = {};
-    pbf.readMessage(readFeatureField, feature);
-    prevFeature = feature;
+function readFeature(pbf, obj) {
+    var tempFeature = pbf.readMessage(readFeatureField, {type: 'Feature'});
+
+    if (openFeatureCol) obj.features.push(tempFeature);
+    else for (var key in tempFeature) obj[key] = tempFeature[key];
 }
 
-function readGeometry(tag, pbf, geom) {
-    geom = {};
-    geom.type = geometryTypes[tag];
-    pbf.readMessage(readGeometryField, geom);
+function readGeometry(tag, pbf, obj) {
+    var tempGeom = pbf.readMessage(readGeometryField, {type: geometryTypes[tag]});
 
-    if (prevFeature) {
-        prevFeature.geometry = geom;
-        geom = prevFeature;
-
-        if (prevFeatureCol) prevFeatureCol.features.push(prevFeature);
-    } else if (prevGeometryCol) {
-        prevGeometryCol.geometries.push(geom);
-        geom = prevGeometryCol;
-    }
+    if (openFeatureCol) obj.features[obj.features.length - 1].geometry = tempGeom;
+    else if (openGeometryCol) obj.geometries.push(tempGeom);
+    else for (var key in tempGeom) obj[key] = tempGeom[key];
 }
 
 function readCollectionField(tag, obj, pbf) {
