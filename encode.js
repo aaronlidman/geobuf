@@ -10,6 +10,7 @@ var keys, values, keysNum,
 function encode(obj) {
     var pbf = initializeBlock();
     analyze(obj);
+    values = Array.from(values);
     writeObject(obj, pbf);
     return writeBlock(pbf);
 }
@@ -101,21 +102,20 @@ function saveKeyValue(key, value) {
 }
 
 function writeObject(obj, pbf) {
-    values = Array.from(values);
-
     if (obj.type === 'FeatureCollection') {
         pbf.writeMessage(3, writeFeatureCollection, obj);
         for (var i = 0; i < obj.features.length; i++) writeObject(obj.features[i], pbf);
         pbf.writeMessage(5, function () {}, {});
-    }
-    else if (obj.type === 'GeometryCollection') {
+
+    } else if (obj.type === 'GeometryCollection') {
         pbf.writeMessage(4, function () {}, {});
         for (var k = 0; k < obj.geometries.length; k++) writeObject(obj.geometries[k], pbf);
         pbf.writeMessage(5, function () {}, {});
-    }
-    else if (obj.type === 'Feature') {
+
+    } else if (obj.type === 'Feature') {
         pbf.writeMessage(6, writeFeature, obj);
         writeGeometry(obj.geometry, pbf);
+
     } else writeGeometry(obj, pbf);
 }
 
