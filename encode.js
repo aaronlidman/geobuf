@@ -148,13 +148,19 @@ function writeGeometry(geom, pbf) {
 
 function writeProps(props, pbf, isCustom) {
     var indexes = [];
+    var valuePosition;
 
     for (var key in props) {
         if (isCustom && isSpecialKey(key, props.type)) {
             continue;
         }
-        indexes.push(keys[key]);
-        indexes.push(values.indexOf(props[key]));
+
+        valuePosition = values.indexOf(props[key]);
+
+        if (valuePosition > -1) {
+            indexes.push(keys[key]);
+            indexes.push(valuePosition);
+        }
     }
 
     if (indexes.length) pbf.writePackedVarint(isCustom ? 15 : 14, indexes);
