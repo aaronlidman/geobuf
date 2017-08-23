@@ -98,7 +98,7 @@ function analyzePoint(point) {
 
 function saveKeyValue(key, value) {
     if (keys[key] === undefined) keys[key] = keysNum++;
-    if (value && !values.has(value)) values.add(value);
+    if (!values.has(value)) values.add(value);
 }
 
 function writeObject(obj, pbf) {
@@ -157,10 +157,8 @@ function writeProps(props, pbf, isCustom) {
 
         valuePosition = values.indexOf(props[key]);
 
-        if (valuePosition > -1) {
-            indexes.push(keys[key]);
-            indexes.push(valuePosition);
-        }
+        indexes.push(keys[key]);
+        indexes.push(valuePosition);
     }
 
     if (indexes.length) pbf.writePackedVarint(isCustom ? 15 : 14, indexes);
