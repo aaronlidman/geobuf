@@ -52,7 +52,7 @@ function writeBlock(pbf) {
     blockSizePbf.writeMessage(1, writeBlockSize, blockSize);
     blockSizePbf = blockSizePbf.finish();
 
-    var block = new Int8Array(blockSizePbf.length + blockSize);
+    var block = new Uint8Array(blockSizePbf.length + blockSize);
     block.set(blockSizePbf);
     block.set(metadata, blockSizePbf.length);
     block.set(pbf, blockSizePbf.length + metadata.length);
