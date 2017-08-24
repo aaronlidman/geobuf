@@ -215,13 +215,14 @@ function writeMultiLine(obj, pbf) {
 function writeMultiPolygon(polygons, pbf) {
     var len = polygons.length,
         i, j;
+
     if (len !== 1 || polygons[0].length !== 1) {
         var lengths = [len];
         for (i = 0; i < len; i++) {
             lengths.push(polygons[i].length);
             for (j = 0; j < polygons[i].length; j++) lengths.push(polygons[i][j].length - 1);
         }
-        pbf.writePackedVarint(2, lengths);
+        pbf.writePackedVarint(1, lengths);
     }
 
     var coords = [];
