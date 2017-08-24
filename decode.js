@@ -80,8 +80,6 @@ function closeCollection() {
 
 function readFeature(pbf, obj) {
     var tempFeature = pbf.readMessage(readFeatureField, {type: 'Feature'});
-    obj.geometry = {};
-
     if (openFeatureCol) obj.features.push(tempFeature);
     else for (var key in tempFeature) obj[key] = tempFeature[key];
 }
@@ -96,6 +94,7 @@ function readGeometry(tag, pbf, obj) {
         obj.geometries.push(tempGeom);
 
     } else if (obj.type === 'Feature') {
+        obj.geometry = {};
         for (var geomKey in tempGeom) obj.geometry[geomKey] = tempGeom[geomKey];
 
     } else {
