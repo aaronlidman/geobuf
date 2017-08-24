@@ -15,7 +15,7 @@ var geometryTypes = {
     '8': 'LineString',
     '9': 'Polygon',
     '10': 'MultiPoint',
-    '11': 'MultiLine',
+    '11': 'MultiLineString',
     '12': 'MultiPolygon'
 };
 
