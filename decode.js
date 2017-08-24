@@ -190,7 +190,9 @@ function readMultiLine(pbf, closed) {
     if (!lengths) return [readLinePart(pbf, end, null, closed)];
 
     var coords = [];
-    for (var i = 0; i < lengths.length; i++) coords.push(readLinePart(pbf, end, lengths[i], closed));
+    for (var i = 0; i < lengths.length; i++) {
+        coords.push(readLinePart(pbf, end, lengths[i], closed));
+    }
     lengths = null;
     return coords;
 }
@@ -203,7 +205,9 @@ function readMultiPolygon(pbf) {
     var j = 1;
     for (var i = 0; i < lengths[0]; i++) {
         var rings = [];
-        for (var k = 0; k < lengths[j]; k++) rings.push(readLinePart(pbf, end, lengths[j + 1 + k], true));
+        for (var k = 0; k < lengths[j]; k++) {
+            rings.push(readLinePart(pbf, end, lengths[j + 1 + k], true));
+        }
         j += lengths[j] + 1;
         coords.push(rings);
     }

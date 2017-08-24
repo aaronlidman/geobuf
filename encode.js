@@ -70,14 +70,22 @@ function analyze(obj) {
         analyze(obj.geometry);
         for (key in obj.properties) saveKeyValue(key, obj.properties[key]);
 
-    } else if (obj.type === 'Point') analyzePoint(obj.coordinates);
-    else if (obj.type === 'MultiPoint') analyzePoints(obj.coordinates);
-    else if (obj.type === 'GeometryCollection') {
+    } else if (obj.type === 'Point') {
+        analyzePoint(obj.coordinates);
+
+    } else if (obj.type === 'MultiPoint') {
+        analyzePoints(obj.coordinates);
+
+    } else if (obj.type === 'GeometryCollection') {
         for (i = 0; i < obj.geometries.length; i++) analyze(obj.geometries[i]);
-    }
-    else if (obj.type === 'LineString') analyzePoints(obj.coordinates);
-    else if (obj.type === 'Polygon' || obj.type === 'MultiLineString') analyzeMultiLine(obj.coordinates);
-    else if (obj.type === 'MultiPolygon') {
+
+    } else if (obj.type === 'LineString') {
+        analyzePoints(obj.coordinates);
+
+    } else if (obj.type === 'Polygon' || obj.type === 'MultiLineString') {
+        analyzeMultiLine(obj.coordinates);
+
+    } else if (obj.type === 'MultiPolygon') {
         for (i = 0; i < obj.coordinates.length; i++) analyzeMultiLine(obj.coordinates[i]);
     }
 
@@ -130,8 +138,9 @@ function writeFeatureCollection(obj, pbf) {
 
 function writeFeature(feature, pbf) {
     if (feature.id !== undefined) {
-        if (typeof feature.id === 'number' && feature.id % 1 === 0) pbf.writeSVarintField(2, feature.id);
-        else pbf.writeStringField(1, feature.id);
+        if (typeof feature.id === 'number' && feature.id % 1 === 0) {
+            pbf.writeSVarintField(2, feature.id);
+        } else pbf.writeStringField(1, feature.id);
     }
 
     if (feature.properties) writeProps(feature.properties, pbf);
@@ -142,7 +151,7 @@ function writeGeometry(geom, pbf) {
     if (geom.type === 'Point') pbf.writeMessage(7, writePoint, geom);
     else if (geom.type === 'LineString') pbf.writeMessage(8, writeLine, geom);
     else if (geom.type === 'Polygon') pbf.writeMessage(9, writeMultiLine, {geom: geom, closed: true});
-    else if (geom.type === 'MultiPoint') pbf.writeMessage(10, writeLine, geom); // TODO test this, I doubt it was working before
+    else if (geom.type === 'MultiPoint') pbf.writeMessage(10, writeLine, geom);
     else if (geom.type === 'MultiLineString') pbf.writeMessage(11, writeMultiLine, {geom: geom});
     else if (geom.type === 'MultiPolygon') pbf.writeMessage(12, writeMultiPolygon, geom);
 }
@@ -152,9 +161,7 @@ function writeProps(props, pbf, isCustom) {
     var valuePosition;
 
     for (var key in props) {
-        if (isCustom && isSpecialKey(key, props.type)) {
-            continue;
-        }
+        if (isCustom && isSpecialKey(key, props.type)) continue;
 
         valuePosition = values.indexOf(props[key]);
 
