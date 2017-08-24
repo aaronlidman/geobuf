@@ -145,9 +145,9 @@ function writeGeometry(geom, pbf) {
 
     if (geom.type === 'Point') pbf.writeMessage(7, writePoint, coords);
     else if (geom.type === 'LineString') pbf.writeMessage(8, writeLine, coords);
-    else if (geom.type === 'Polygon') pbf.writeMessage(9, writeMultiLine, coords, true);
+    else if (geom.type === 'Polygon') pbf.writeMessage(9, writeMultiLine, {coords: coords, closed: true});
     else if (geom.type === 'MultiPoint') pbf.writeMessage(10, writeLine, coords); // TODO test this, I doubt it was working before
-    else if (geom.type === 'MultiLineString') pbf.writeMessage(11, writeMultiLine, coords);
+    else if (geom.type === 'MultiLineString') pbf.writeMessage(11, writeMultiLine, {coords: coords});
     else if (geom.type === 'MultiPolygon') pbf.writeMessage(12, writeMultiPolygon, coords);
 
     writeProps(geom, pbf, true);
@@ -196,14 +196,16 @@ function writeLine(line, pbf) {
     pbf.writePackedSVarint(2, coords);
 }
 
-function writeMultiLine(lines, pbf, closed) {
+function writeMultiLine(obj, pbf) {
+    var lines = obj.coords;
+    var closed = obj.closed || false;
+
     var len = lines.length,
         i;
     if (len !== 1) {
         var lengths = [];
         for (i = 0; i < len; i++) lengths.push(lines[i].length - (closed ? 1 : 0));
         pbf.writePackedVarint(1, lengths);
-        // TODO faster with custom writeMessage?
     }
     var coords = [];
     for (i = 0; i < len; i++) populateLine(coords, lines[i], closed);
