@@ -47,7 +47,7 @@ idaho.pbf           | 1.37 MB   | 1.17 MB
 var buffer = geobuf.encode(geojson);
 ```
 
-Given a GeoJSON object, returns a Geobuf as `UInt8Array` arrya of bytes.
+Given a GeoJSON object, returns a Geobuf as `UInt8Array` array of bytes.
 In Node, you can use `Buffer.from` to convert back to a buffer.
 
 ### decode
