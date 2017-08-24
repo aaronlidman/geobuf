@@ -81,9 +81,7 @@ function analyze(obj) {
         for (i = 0; i < obj.coordinates.length; i++) analyzeMultiLine(obj.coordinates[i]);
     }
 
-    for (key in obj) {
-        if (!isSpecialKey(key, obj.type)) saveKeyValue(key, null);
-    }
+    for (key in obj) if (!isSpecialKey(key, obj.type)) saveKeyValue(key, obj[key]);
 }
 
 function analyzeMultiLine(coords) {
@@ -141,16 +139,12 @@ function writeFeature(feature, pbf) {
 }
 
 function writeGeometry(geom, pbf) {
-    var coords = geom.coordinates;
-
-    if (geom.type === 'Point') pbf.writeMessage(7, writePoint, coords);
-    else if (geom.type === 'LineString') pbf.writeMessage(8, writeLine, coords);
-    else if (geom.type === 'Polygon') pbf.writeMessage(9, writeMultiLine, {coords: coords, closed: true});
-    else if (geom.type === 'MultiPoint') pbf.writeMessage(10, writeLine, coords); // TODO test this, I doubt it was working before
-    else if (geom.type === 'MultiLineString') pbf.writeMessage(11, writeMultiLine, {coords: coords});
-    else if (geom.type === 'MultiPolygon') pbf.writeMessage(12, writeMultiPolygon, coords);
-
-    writeProps(geom, pbf, true);
+    if (geom.type === 'Point') pbf.writeMessage(7, writePoint, geom);
+    else if (geom.type === 'LineString') pbf.writeMessage(8, writeLine, geom);
+    else if (geom.type === 'Polygon') pbf.writeMessage(9, writeMultiLine, {geom: geom, closed: true});
+    else if (geom.type === 'MultiPoint') pbf.writeMessage(10, writeLine, geom); // TODO test this, I doubt it was working before
+    else if (geom.type === 'MultiLineString') pbf.writeMessage(11, writeMultiLine, {geom: geom});
+    else if (geom.type === 'MultiPolygon') pbf.writeMessage(12, writeMultiPolygon, geom);
 }
 
 function writeProps(props, pbf, isCustom) {
@@ -186,18 +180,22 @@ function writeValue(value, pbf) {
 
 function writePoint(point, pbf) {
     var coords = [];
-    for (var i = 0; i < dim; i++) coords.push(Math.round(point[i] * e));
+    for (var i = 0; i < dim; i++) coords.push(Math.round(point.coordinates[i] * e));
     pbf.writePackedSVarint(2, coords);
+
+    writeProps(point, pbf, true);
 }
 
 function writeLine(line, pbf) {
     var coords = [];
-    populateLine(coords, line);
+    populateLine(coords, line.coordinates);
     pbf.writePackedSVarint(2, coords);
+
+    writeProps(line, pbf, true);
 }
 
 function writeMultiLine(obj, pbf) {
-    var lines = obj.coords;
+    var lines = obj.geom.coordinates;
     var closed = obj.closed || false;
 
     var len = lines.length,
@@ -210,9 +208,12 @@ function writeMultiLine(obj, pbf) {
     var coords = [];
     for (i = 0; i < len; i++) populateLine(coords, lines[i], closed);
     pbf.writePackedSVarint(2, coords);
+
+    writeProps(obj.geom, pbf, true);
 }
 
-function writeMultiPolygon(polygons, pbf) {
+function writeMultiPolygon(geom, pbf) {
+    var polygons = geom.coordinates;
     var len = polygons.length,
         i, j;
 
@@ -230,6 +231,8 @@ function writeMultiPolygon(polygons, pbf) {
         for (j = 0; j < polygons[i].length; j++) populateLine(coords, polygons[i][j], true);
     }
     pbf.writePackedSVarint(2, coords);
+
+    writeProps(geom, pbf, true);
 }
 
 function populateLine(coords, line, closed) {
