@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 'use strict';
 
 module.exports = decode;
@@ -79,6 +80,7 @@ function closeCollection() {
 
 function readFeature(pbf, obj) {
     var tempFeature = pbf.readMessage(readFeatureField, {type: 'Feature'});
+    obj.geometry = {};
 
     if (openFeatureCol) obj.features.push(tempFeature);
     else for (var key in tempFeature) obj[key] = tempFeature[key];
@@ -87,9 +89,18 @@ function readFeature(pbf, obj) {
 function readGeometry(tag, pbf, obj) {
     var tempGeom = pbf.readMessage(readGeometryField, {type: geometryTypes[tag]});
 
-    if (openFeatureCol) obj.features[obj.features.length - 1].geometry = tempGeom;
-    else if (openGeometryCol) obj.geometries.push(tempGeom);
-    else for (var key in tempGeom) obj[key] = tempGeom[key];
+    if (openFeatureCol) {
+        obj.features[obj.features.length - 1].geometry = tempGeom;
+
+    } else if (openGeometryCol) {
+        obj.geometries.push(tempGeom);
+
+    } else if (obj.type === 'Feature') {
+        for (var geomKey in tempGeom) obj.geometry[geomKey] = tempGeom[geomKey];
+
+    } else {
+        for (var key in tempGeom) obj[key] = tempGeom[key];
+    }
 }
 
 function readCollectionField(tag, obj, pbf) {
