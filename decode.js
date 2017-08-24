@@ -37,7 +37,11 @@ function initializeBlock() {
 }
 
 function readDataField(tag, obj, pbf) {
-    if (tag === 1) blockSize = pbf.readFixed32();
+    if (tag === 1) {
+        // necessary because of https://github.com/mapbox/pbf/blob/6deeabcd60c2e900bb216dec0f3e210347eb923c/index.js#L317-L319
+        var msgLength = pbf.readVarint();
+        blockSize = pbf.readFixed32();
+    }
     else if (tag === 2) pbf.readMessage(readMetadataField, obj);
     else if (tag === 3) readFeatureCollection(pbf, obj);
     else if (tag === 4) readGeometryCollection(pbf, obj);

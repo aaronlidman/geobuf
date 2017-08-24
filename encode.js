@@ -36,19 +36,26 @@ function writeMetadata(obj, pbf) {
     for (var k = 0; k < values.length; k++) pbf.writeMessage(6, writeValue, values[k]);
 }
 
+function writeBlockSize(blockSize, pbf) {
+    pbf.writeFixed32(blockSize);
+}
+
 function writeBlock(pbf) {
     var metadata = new Pbf();
     metadata.writeMessage(2, writeMetadata, {});
     metadata = metadata.finish();
 
     pbf = pbf.finish();
+    var blockSize = metadata.length + pbf.length;
 
-    // prepend metadata, unfortunately we must copy
-    var block = new Int8Array(metadata.length + pbf.length);
-    block.set(metadata);
-    block.set(pbf, metadata.length);
+    var blockSizePbf = new Pbf();
+    blockSizePbf.writeMessage(1, writeBlockSize, blockSize);
+    blockSizePbf = blockSizePbf.finish();
 
-    // TODO prepend block_size
+    var block = new Int8Array(blockSizePbf.length + blockSize);
+    block.set(blockSizePbf);
+    block.set(metadata, blockSizePbf.length);
+    block.set(pbf, blockSizePbf.length + metadata.length);
 
     return block;
 }
