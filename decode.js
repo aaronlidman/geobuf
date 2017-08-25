@@ -7,7 +7,8 @@ var Pbf = require('pbf');
 
 var keys, values, lengths,
     dim, e, blockSize, version,
-    openFeatureCol, openGeometryCol;
+    openFeatureCol, openGeometryCol, objects,
+    objectsIdx;
 
 // cooresponding to tags
 var geometryTypes = {
@@ -22,9 +23,9 @@ var geometryTypes = {
 function decode(buffer) {
     initializeBlock();
     var pbf = new Pbf(buffer);
-    var obj = pbf.readFields(readDataField, {});
+    pbf.readFields(readDataField);
     keys = null;
-    return obj;
+    return objects;
 }
 
 function initializeBlock() {
@@ -35,20 +36,26 @@ function initializeBlock() {
     version = null;
     keys = [];
     values = [];
+    objects = [];
+}
+
+function newObject() {
+    objects.push({});
+    objectsIdx = objects.length - 1;
+    return objects[objectsIdx];
 }
 
 function readDataField(tag, obj, pbf) {
     if (tag === 1) {
-        // necessary because of https://github.com/mapbox/pbf/blob/6deeabcd60c2e900bb216dec0f3e210347eb923c/index.js#L317-L319
         var msgLength = pbf.readVarint();
         blockSize = pbf.readFixed32();
     }
-    else if (tag === 2) pbf.readMessage(readMetadataField, obj);
-    else if (tag === 3) readFeatureCollection(pbf, obj);
-    else if (tag === 4) readGeometryCollection(pbf, obj);
+    else if (tag === 2) pbf.readMessage(readMetadataField, {});
+    else if (tag === 3) readFeatureCollection(pbf);
+    else if (tag === 4) readGeometryCollection(pbf);
     else if (tag === 5) closeCollection();
-    else if (tag === 6) readFeature(pbf, obj);
-    else if (tag > 6 && tag < 13) readGeometry(tag, pbf, obj);
+    else if (tag === 6) readFeature(pbf);
+    else if (tag > 6 && tag < 13) readGeometry(tag, pbf);
 }
 
 function readMetadataField(tag, obj, pbf) {
@@ -59,17 +66,23 @@ function readMetadataField(tag, obj, pbf) {
     else if (tag === 6) values.push(readValue(pbf));
 }
 
-function readFeatureCollection(pbf, obj) {
+function readFeatureCollection(pbf) {
+    var obj = newObject();
+
     obj.type = 'FeatureCollection';
     obj.features = [];
     openFeatureCol = true;
+
     return pbf.readMessage(readCollectionField, obj);
 }
 
-function readGeometryCollection(pbf, obj) {
+function readGeometryCollection(pbf) {
+    var obj = newObject();
+
     obj.type = 'GeometryCollection';
     obj.geometries = [];
     openGeometryCol = true;
+
     return pbf.readMessage(readCollectionField, obj);
 }
 
@@ -78,13 +91,21 @@ function closeCollection() {
     openGeometryCol = false;
 }
 
-function readFeature(pbf, obj) {
+function readFeature(pbf) {
+    var obj = objects[objectsIdx];
+
     var tempFeature = pbf.readMessage(readFeatureField, {type: 'Feature'});
+
     if (openFeatureCol) obj.features.push(tempFeature);
-    else for (var key in tempFeature) obj[key] = tempFeature[key];
+    else {
+        obj = newObject();
+        for (var key in tempFeature) obj[key] = tempFeature[key];
+    }
 }
 
-function readGeometry(tag, pbf, obj) {
+function readGeometry(tag, pbf) {
+    var obj = objects[objectsIdx];
+
     var tempGeom = pbf.readMessage(readGeometryField, {type: geometryTypes[tag]});
 
     if (openFeatureCol) {
@@ -98,6 +119,7 @@ function readGeometry(tag, pbf, obj) {
         for (var geomKey in tempGeom) obj.geometry[geomKey] = tempGeom[geomKey];
 
     } else {
+        obj = newObject();
         for (var key in tempGeom) obj[key] = tempGeom[key];
     }
 }

@@ -9,9 +9,17 @@ var keys, values, keysNum,
 
 function encode(obj) {
     var pbf = initializeBlock();
-    analyze(obj);
-    values = Array.from(values);
-    writeObject(obj, pbf);
+
+    if (Array.isArray(obj)) {
+        for (var i = 0; i < obj.length; i++) analyze(obj[i]);
+        values = Array.from(values);
+        for (var j = 0; j < obj.length; j++) writeObject(obj[j], pbf);
+    } else {
+        analyze(obj);
+        values = Array.from(values);
+        writeObject(obj, pbf);
+    }
+
     return writeBlock(pbf);
 }
 
